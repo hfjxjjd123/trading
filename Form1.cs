@@ -13,13 +13,19 @@ namespace GiveMeTheMoney
     public partial class Form1 : Form
     {
         List<List<string>> hotList = new List<List<string>>();
-        int[] time = { 30, 1, 2, 3, 4, 5, 6, 7 };
-        List<string> semiList = new List<string>(); // 여기 바꿨어요~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+        // int[] time = { 30, 1, 2, 3, 4, 5, 6};
+        List<string> semiList = new List<string>(); 
         List<string> buyList = new List<string>();
         int count = 0;
-        int counter = 0;
+        static int counter = 0;
+        static int countery = 0;
         string accountNo = "8020133911";
+        string accountPw = "0000";
         int depoeach;
+        string buyConfirm;
+        int buyPrice, buyQuan;
+        string date = DateTime.Now.ToString("yyyyMMdd");
+        int cycle = 0;
 
 
         public Form1()
@@ -36,8 +42,11 @@ namespace GiveMeTheMoney
         private void button1_Click(object sender, EventArgs e)
         {
             if (axKHOpenAPI1.CommConnect() == 0)
-                listBox1.Items.Add("로그인시작");
+            {
 
+                listBox1.Items.Add(date);
+                listBox1.Items.Add("로그인시작");
+            }
             else
                 listBox1.Items.Add("로그인 실패 : 접속이 안돼있습니다");
 
@@ -60,8 +69,7 @@ namespace GiveMeTheMoney
         private void 계좌정보호출_Click(object sender, EventArgs e)
         {
             //계좌정보호출
-            
-            string accountPw = "0000";
+
 
             axKHOpenAPI1.SetInputValue("계좌번호", accountNo);
             axKHOpenAPI1.SetInputValue("비밀번호", accountPw);
@@ -109,7 +117,7 @@ namespace GiveMeTheMoney
             if (e.sRQName == "전일대비등락률상위")
             {
 
-                for (int nIdx = 0; nIdx <= 4; nIdx++)
+                for (int nIdx = 0; nIdx < 7; nIdx++)
                 {
                     string code = axKHOpenAPI1.GetCommData(e.sTrCode, e.sRQName, nIdx, "종목코드").Trim();
                     string nowprice = axKHOpenAPI1.GetCommData(e.sTrCode, e.sRQName, nIdx, "현재가").Trim();
@@ -118,15 +126,33 @@ namespace GiveMeTheMoney
                     listBox2.Items.Add(nowprice);
 
                     semiList.Add(code);
-                    semiList.Add(nowprice);
 
                 }
                 listBox2.Items.Add(" ");
 
-                Delay(10000);
+                Delay(30000);
                 button2.PerformClick();
 
 
+            }
+        }
+
+        public void getBuyState() // event callback을 하지 않고 이 메소드를 바로 호출하면서 진행이 가능한지? 돌려보고확인 요망
+        {
+            axKHOpenAPI1.SetInputValue("계좌번호", accountNo); axKHOpenAPI1.SetInputValue("매도수구분", "2"); axKHOpenAPI1.SetInputValue("비밀번호", accountPw); axKHOpenAPI1.SetInputValue("비밀번호입력매체구분", "00");
+            axKHOpenAPI1.SetInputValue("조회구분", "0"); axKHOpenAPI1.SetInputValue("주문일자", date);
+
+            int nFind = axKHOpenAPI1.CommRqData("체결확인", "opw00009", 0, "4003");
+            axKHOpenAPI1.OnReceiveTrData += onReceiveTrDataBuyState;
+        }
+
+        public void onReceiveTrDataBuyState(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveTrDataEvent e)
+        {
+            if (e.sRQName == "체결확인")
+            {
+                buyConfirm = axKHOpenAPI1.GetCommData(e.sTrCode, e.sRQName, countery, "접수구분").Trim();
+                buyPrice = int.Parse(axKHOpenAPI1.GetCommData(e.sTrCode, e.sRQName, countery, "체결단가").Trim());
+                buyQuan = int.Parse(axKHOpenAPI1.GetCommData(e.sTrCode, e.sRQName, countery, "체결수량").Trim());
             }
         }
 
@@ -134,7 +160,7 @@ namespace GiveMeTheMoney
         {
             axKHOpenAPI1.SetInputValue("시장구분", "001"); axKHOpenAPI1.SetInputValue("정렬구분", "1"); axKHOpenAPI1.SetInputValue("거래량조건", "0050"); axKHOpenAPI1.SetInputValue("종목조건", "16"); axKHOpenAPI1.SetInputValue("상하한포함", "0");
 
-            int nFind = axKHOpenAPI1.CommRqData("전일대비등락률상위2","OPT10027", 0, "2001");
+            int nFind = axKHOpenAPI1.CommRqData("전일대비등락률상위2", "OPT10027", 0, "2001");
             if (nFind == 0)
                 listBox1.Items.Add("전일대비등락률상위 성공");
             else
@@ -146,73 +172,61 @@ namespace GiveMeTheMoney
         {
             if (e.sRQName == "전일대비등락률상위2")
             {
-                for (int nIdx = 0; nIdx <= 4; nIdx++)
+                for (int nIdx = 0; nIdx < 7; nIdx++)
                 {
                     string code = axKHOpenAPI1.GetCommData(e.sTrCode, e.sRQName, nIdx, "종목코드").Trim();
                     string nowprice = axKHOpenAPI1.GetCommData(e.sTrCode, e.sRQName, nIdx, "현재가").Trim();
 
-                    listBox2.Items.Add(code); 
-                    listBox2.Items.Add(nowprice); 
-                    bool previous = false;
+                    listBox2.Items.Add(code);
+                    listBox2.Items.Add(nowprice);
+                    nowprice.Replace("+", "");
+                    int value = int.Parse(nowprice);
 
-                    for (int cnt = 0; cnt<10; cnt=cnt+2)
+
+                    if ((buyList.Contains(code) == false) && counter < 6)
                     {
-                        if (code == semiList[cnt]) 
+                        if (semiList.Contains(code) == true)
                         {
-                            previous = true;
-                            if (nIdx * 2 < (cnt))
+                            for (int cnt = 0; cnt < 7; cnt++)
                             {
-                                nowprice.Replace("+","");
-                                int value = int.Parse(nowprice);
-                                axKHOpenAPI1.SendOrder("주문", "4001", accountNo, 1, code, (depoeach / value ), 0, "03", ""); //구매요청
-                                구매창.Items.Add(code + "를 주문했습니다");
-                                if (buyList.Contains(code) == false) { buyList.Add(code); }
-                                axKHOpenAPI1.SendOrder("주문", "4002", accountNo, 2, code, (depoeach /value), (int)(value*1.03), "00", ""); //판매요청
-                                counter++;
+                                if (code == semiList[cnt]) //추후 buylist에 없을 때 라는 조건을 추가해야함
+                                {
+                                    if (nIdx < cnt)
+                                    {
+                                        axKHOpenAPI1.SendOrder("주문", "4001", accountNo, 1, code, (depoeach / value), 0, "03", ""); //구매요청
+                                        구매창.Items.Add(code + "를 주문했습니다");
+                                        buyList.Add(code);
+                                        counter++;
+                                    }
+                                }
                             }
-                        } 
-                          
+                        }
+                        else
+                        {
+                            axKHOpenAPI1.SendOrder("주문", "4001", accountNo, 1, code, (depoeach / value), 0, "03", ""); //구매요청
+                            구매창.Items.Add(code + "를 주문했습니다");
+                            buyList.Add(code);
+                            counter++;
+                        }
                     }
-
-                    if (previous == false)
-                    {
-                        nowprice.Replace("+", "");
-                        int value = int.Parse(nowprice);
-                        axKHOpenAPI1.SendOrder("주문", "4001", accountNo, 1, code, (depoeach / value), 0, "03", ""); //구매요청
-                        구매창.Items.Add(code + "를 주문했습니다");
-                        if (buyList.Contains(code) == false) { buyList.Add(code); }
-                        axKHOpenAPI1.SendOrder("주문", "4002", accountNo, 2, code, (depoeach / value), (int)(value * 1.03), "00", ""); //판매요청
-                        counter++;
-                    }
-
                     semiList.Add(code);
-                    semiList.Add(nowprice);
-             
+                }
+
+                while (countery != counter)
+                {
+                    getBuyState();
+                    while (buyConfirm != "주문완료") { Delay(200); getBuyState(); }
+                    buyConfirm = "";
+                    axKHOpenAPI1.SendOrder("주문", "4002", accountNo, 2, buyList[countery], buyQuan, (int)(buyPrice * 1.025), "00", ""); //판매요청
+                    countery++;
                 }
                 listBox2.Items.Add(" ");
-                count = count + 10;
-                Delay(20000);
+                count = count + 7;
+                Delay(60000);
                 button3.PerformClick();
-
 
             }
         }
-
-
-        // axKHOpenAPI1.SendOrder("주문", "4001", accountNo, 1, code, quan, 0,"03", ""); //구매요청
-        //axKHOpenAPI1.SendOrder("주문", "4001", accountNo, 1, code, quan, 0, "03", ""); ;//구매요청
-
-
-        /*바로 매도 주문을 걸지 or 모든 매수주문을 마친 후 매도 주문을 걸지? 
-         후 매도주문이 더 나아보임 잠깐이나마 모든 주문이 체결될 때까지 기다리고 어차피 루프도는데 시간 별로 안걸려서
-        그사이에 +3퍼가 되는 종목은 없을것으로 판단
-
-        구매한 종목을 보이는 buyList에 종목정보 집어넣고 관리
-         */
-
-
-
-        //
 
         public void Delay(int ms)
         {
@@ -247,135 +261,65 @@ namespace GiveMeTheMoney
         {
             if (e.sRQName == "전일대비등락률상위3")
             {
-                for (int nIdx = 0; nIdx <= 4; nIdx++)
+                for (int nIdx = 0; nIdx < 7; nIdx++)
                 {
                     string code = axKHOpenAPI1.GetCommData(e.sTrCode, e.sRQName, nIdx, "종목코드").Trim();
                     string nowprice = axKHOpenAPI1.GetCommData(e.sTrCode, e.sRQName, nIdx, "현재가").Trim();
 
-
                     listBox2.Items.Add(code);
                     listBox2.Items.Add(nowprice);
+                    nowprice.Replace("+", "");
+                    int value = int.Parse(nowprice);
 
-                    bool previous = false;
-                    if (buyList.Contains(code)==false) {
-                    
-                    for (int cnt = count; cnt < count+10; cnt = cnt + 2)
+
+                    if ((buyList.Contains(code) == false) && counter < 6)
                     {
-
-
-                        if (semiList[cnt] == code)
+                        if (semiList.Contains(code) == true)
                         {
-                            previous = true;
-                            if (nIdx * 2 < (cnt - count))
+                            for (int cnt = count; cnt < count + 7; cnt++)
                             {
-                                nowprice.Replace("+", "");
-                                int value = int.Parse(nowprice);
-                                axKHOpenAPI1.SendOrder("주문", "4001", accountNo, 1, code, (depoeach / value), 0, "03", ""); //구매요청
-                                구매창.Items.Add(code + "를 주문했습니다");
-                                if (buyList.Contains(code) == false) { buyList.Add(code); }
-                                axKHOpenAPI1.SendOrder("주문", "4002", accountNo, 2, code, (depoeach / value), (int)(value * 1.03), "00", ""); //판매요청
-                                counter++;
-
+                                if (code == semiList[cnt]) //추후 buylist에 없을 때 라는 조건을 추가해야함
+                                {
+                                    if (nIdx < cnt - count)
+                                    {
+                                        axKHOpenAPI1.SendOrder("주문", "4001", accountNo, 1, code, (depoeach / value), 0, "03", ""); //구매요청
+                                        구매창.Items.Add(code + "를 주문했습니다");
+                                        buyList.Add(code);
+                                        counter++;
+                                    }
+                                }
                             }
-                        } 
-
-                    }
-                    if (previous == false)
-                    {
-                        nowprice.Replace("+", "");
-                        int value = int.Parse(nowprice);
-                        axKHOpenAPI1.SendOrder("주문", "4001", accountNo, 1, code, (depoeach / value), 0, "03", ""); //구매요청
-                        구매창.Items.Add(code + "를 주문했습니다");
-                        if (buyList.Contains(code) == false) { buyList.Add(code); }
-                        axKHOpenAPI1.SendOrder("주문", "4002", accountNo, 2, code, (depoeach / value), (int)(value * 1.03), "00", ""); //판매요청
-                        counter++;
-                    }
-                    }
-
-                    semiList.Add(code);
-                    semiList.Add(nowprice);
-
-                }
-                listBox2.Items.Add(" ");
-                count = count + 10;
-                Delay(20000);
-                button4.PerformClick();
-
-
-            }
-        }
-
-        private void button4_Click(object sender, EventArgs e)
-        {
-            axKHOpenAPI1.SetInputValue("시장구분", "001");
-            axKHOpenAPI1.SetInputValue("정렬구분", "1");
-            axKHOpenAPI1.SetInputValue("거래량조건", "0050");
-            axKHOpenAPI1.SetInputValue("종목조건", "16");
-            axKHOpenAPI1.SetInputValue("상하한포함", "0");
-
-            int nFind = axKHOpenAPI1.CommRqData("전일대비등락률상위4", "OPT10027", 0, "2001");
-            if (nFind == 0)
-                listBox1.Items.Add("전일대비등락률상위 성공");
-            else
-                listBox1.Items.Add("전일대비등락률상위 실패");
-            axKHOpenAPI1.OnReceiveTrData += onReceiveTrData상위값4;
-        }
-
-        public void onReceiveTrData상위값4(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveTrDataEvent e)
-        {
-            if (e.sRQName == "전일대비등락률상위4")
-            {
-                for (int nIdx = 0; nIdx <= 4; nIdx++)
-                {
-                    string code = axKHOpenAPI1.GetCommData(e.sTrCode, e.sRQName, nIdx, "종목코드").Trim();
-                    string nowprice = axKHOpenAPI1.GetCommData(e.sTrCode, e.sRQName, nIdx, "현재가").Trim();
-
-
-                    listBox2.Items.Add(code);
-                    listBox2.Items.Add(nowprice);
-
-                    bool previous = false;
-                    if (buyList.Contains(code) == false)
-                    {
-
-                    for (int cnt = count; cnt < count + 10; cnt = cnt + 2)
-                    {
-
-
-                        if (semiList[cnt] == code)
-                            previous = true;
-                            if (nIdx * 2 < (cnt - count))
-                            {
-                                nowprice.Replace("+", "");
-                                int value = int.Parse(nowprice);
-                                axKHOpenAPI1.SendOrder("주문", "4001", accountNo, 1, code, (depoeach / value), 0, "03", ""); //구매요청
-                                구매창.Items.Add(code + "를 주문했습니다");
-                                buyList.Add(code); 
-                            axKHOpenAPI1.SendOrder("주문", "4002", accountNo, 2, code, (depoeach / value), (int)(value * 1.03), "00", ""); //판매요청
+                        }
+                        else
+                        {
+                            axKHOpenAPI1.SendOrder("주문", "4001", accountNo, 1, code, (depoeach / value), 0, "03", ""); //구매요청
+                            구매창.Items.Add(code + "를 주문했습니다");
+                            buyList.Add(code);
                             counter++;
-                            } 
-
+                        }
                     }
-                    if (previous == false)
-                    {
-                        nowprice.Replace("+", "");
-                        int value = int.Parse(nowprice);
-                        axKHOpenAPI1.SendOrder("주문", "4001", accountNo, 1, code, (depoeach / value), 0, "03", ""); //구매요청
-                        구매창.Items.Add(code + "를 주문했습니다");
-                        buyList.Add(code);
-                        axKHOpenAPI1.SendOrder("주문", "4002", accountNo, 2, code, (depoeach /value), (int)(value*1.03), "00", ""); //판매요청
-                        counter++;
-                    }
-                    }
-
                     semiList.Add(code);
-                    semiList.Add(nowprice);
+                }
+
+                while (countery != counter)
+                {
+                    getBuyState();
+                    while (buyConfirm != "주문완료") { Delay(200); getBuyState(); }
+                    buyConfirm = "";
+                    axKHOpenAPI1.SendOrder("주문", "4002", accountNo, 2, buyList[countery], buyQuan, (int)(buyPrice * 1.025), "00", ""); //판매요청
+                    countery++;
                 }
                 listBox2.Items.Add(" ");
-                count = count + 10;
-
+                count = count + 7;
+                Delay(60000);
+                if (cycle < 4)
+                {
+                    cycle++;
+                    button3.PerformClick(); //도르마무
+                }
 
             }
         }
     }
 }
+  
