@@ -137,7 +137,7 @@ namespace GiveMeTheMoney
             }
         }
 
-        public void getBuyState() // event callback을 하지 않고 이 메소드를 바로 호출하면서 진행이 가능한지? 돌려보고확인 요망
+        private void button4_Click(object sender, EventArgs e)
         {
             axKHOpenAPI1.SetInputValue("계좌번호", accountNo); axKHOpenAPI1.SetInputValue("매도수구분", "2"); axKHOpenAPI1.SetInputValue("비밀번호", accountPw); axKHOpenAPI1.SetInputValue("비밀번호입력매체구분", "00");
             axKHOpenAPI1.SetInputValue("조회구분", "0"); axKHOpenAPI1.SetInputValue("주문일자", date);
@@ -145,6 +145,7 @@ namespace GiveMeTheMoney
             int nFind = axKHOpenAPI1.CommRqData("체결확인", "opw00009", 0, "4003");
             axKHOpenAPI1.OnReceiveTrData += onReceiveTrDataBuyState;
         }
+
 
         public void onReceiveTrDataBuyState(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveTrDataEvent e)
         {
@@ -214,8 +215,10 @@ namespace GiveMeTheMoney
 
                 while (countery != counter)
                 {
-                    getBuyState();
-                    while (buyConfirm != "주문완료") { Delay(200); getBuyState(); }
+                    구매창.Items.Add("while countery"); //여기까진 된다
+                    do {button4.PerformClick(); Delay(200); } //getBuyState 를 통한 매도주문이 안되고 있는것으로 보임. @일단 이벤트를 받지 못한것으로 판단함 양식을 바꿔줘야함
+                    while (buyConfirm != "주문완료") ;
+                    구매창.Items.Add(buyList[countery] + " 매도주문을 넣었습니다");
                     buyConfirm = "";
                     axKHOpenAPI1.SendOrder("주문", "4002", accountNo, 2, buyList[countery], buyQuan, (int)(buyPrice * 1.025), "00", ""); //판매요청
                     countery++;
@@ -256,6 +259,8 @@ namespace GiveMeTheMoney
                 listBox1.Items.Add("전일대비등락률상위 실패");
             axKHOpenAPI1.OnReceiveTrData += onReceiveTrData상위값3;
         }
+
+        
 
         public void onReceiveTrData상위값3(object sender, AxKHOpenAPILib._DKHOpenAPIEvents_OnReceiveTrDataEvent e)
         {
@@ -303,8 +308,8 @@ namespace GiveMeTheMoney
 
                 while (countery != counter)
                 {
-                    getBuyState();
-                    while (buyConfirm != "주문완료") { Delay(200); getBuyState(); }
+                    do { button4.PerformClick(); Delay(200); }
+                    while (buyConfirm != "주문완료");
                     buyConfirm = "";
                     axKHOpenAPI1.SendOrder("주문", "4002", accountNo, 2, buyList[countery], buyQuan, (int)(buyPrice * 1.025), "00", ""); //판매요청
                     countery++;
@@ -322,4 +327,5 @@ namespace GiveMeTheMoney
         }
     }
 }
-  
+  // 이거 뭐냐 .etf로 도배되는 날은 금지
+  // 리퀘스트가 많다는 문제를 해결해야함
