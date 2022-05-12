@@ -141,7 +141,7 @@ namespace GiveMeTheMoney
         {
             axKHOpenAPI1.SetInputValue("계좌번호", accountNo); axKHOpenAPI1.SetInputValue("매도수구분", "2"); axKHOpenAPI1.SetInputValue("비밀번호", accountPw); axKHOpenAPI1.SetInputValue("비밀번호입력매체구분", "00");
             axKHOpenAPI1.SetInputValue("조회구분", "0"); axKHOpenAPI1.SetInputValue("주문일자", date);
-
+            
             int nFind = axKHOpenAPI1.CommRqData("체결확인", "opw00009", 0, "4003");
             axKHOpenAPI1.OnReceiveTrData += onReceiveTrDataBuyState;
         }
@@ -151,9 +151,11 @@ namespace GiveMeTheMoney
         {
             if (e.sRQName == "체결확인")
             {
+                구매창.Items.Add("매도시도 확인"); //for debugging
                 buyConfirm = axKHOpenAPI1.GetCommData(e.sTrCode, e.sRQName, countery, "접수구분").Trim();
                 buyPrice = int.Parse(axKHOpenAPI1.GetCommData(e.sTrCode, e.sRQName, countery, "체결단가").Trim());
                 buyQuan = int.Parse(axKHOpenAPI1.GetCommData(e.sTrCode, e.sRQName, countery, "체결수량").Trim());
+                구매창.Items.Add(buyConfirm); //for debugging
             }
         }
 
@@ -215,8 +217,8 @@ namespace GiveMeTheMoney
 
                 while (countery != counter)
                 {
-                    구매창.Items.Add("while countery"); //여기까진 된다
-                    do {button4.PerformClick(); Delay(200); } //getBuyState 를 통한 매도주문이 안되고 있는것으로 보임. @일단 이벤트를 받지 못한것으로 판단함 양식을 바꿔줘야함
+                    구매창.Items.Add("while countery"); //여기까진 된다 이번엔 여기까지도 안왔어
+                    do {button4.PerformClick(); 구매창.Items.Add("시도중");  Delay(200); } //getBuyState 를 통한 매도주문이 안되고 있는것으로 보임. @일단 이벤트를 받지 못한것으로 판단함 양식을 바꿔줘야함
                     while (buyConfirm != "주문완료") ;
                     구매창.Items.Add(buyList[countery] + " 매도주문을 넣었습니다");
                     buyConfirm = "";
@@ -225,7 +227,7 @@ namespace GiveMeTheMoney
                 }
                 listBox2.Items.Add(" ");
                 count = count + 7;
-                Delay(60000);
+                Delay(30000);
                 button3.PerformClick();
 
             }
@@ -308,7 +310,8 @@ namespace GiveMeTheMoney
 
                 while (countery != counter)
                 {
-                    do { button4.PerformClick(); Delay(200); }
+                    구매창.Items.Add("while countery"); //여기까진 된다 이번엔 여기까지도 안왔어
+                    do { button4.PerformClick(); 구매창.Items.Add("시도중"); Delay(200); }
                     while (buyConfirm != "주문완료");
                     buyConfirm = "";
                     axKHOpenAPI1.SendOrder("주문", "4002", accountNo, 2, buyList[countery], buyQuan, (int)(buyPrice * 1.025), "00", ""); //판매요청
@@ -316,7 +319,7 @@ namespace GiveMeTheMoney
                 }
                 listBox2.Items.Add(" ");
                 count = count + 7;
-                Delay(60000);
+                Delay(30000);
                 if (cycle < 4)
                 {
                     cycle++;
